@@ -12,6 +12,7 @@ const markedAsync = Bluebird.promisify(marked);
 // Public
 export default (cwd) => {
   const router = expressRouter();
+  const pendingCaches = {};
 
   router.use((req, res, next) => {
     let filePath = req.url.slice(1);
@@ -30,18 +31,23 @@ export default (cwd) => {
       return res.sendFile(cacheName);
     }
 
-    console.log('以降の処理は重いので１度だけ実行したい');
+    const needCache = pendingCaches[cacheName] === undefined;
+    if (needCache) {
+      console.log('以降の処理は重いので１度だけ実行したい');
 
-    return fs.readFileAsync(fileName)
-    .then((data) => markedAsync(data.toString()))
-    .then((cache) => {
-      const trimedCache = cache.trim();// 末尾"\n"の削除
+      pendingCaches[cacheName] = fs.readFileAsync(fileName)
+      .then((data) => markedAsync(data.toString()))
+      .then((cache) => {
+        const trimedCache = cache.trim();// 末尾"\n"の削除
 
-      return fs.writeFileAsync(cacheName, trimedCache)
-      .then(() => {
-        res.set('content-type', 'text/html');
-        res.end(trimedCache);
+        return fs.writeFileAsync(cacheName, trimedCache)
+        .then(() => trimedCache);
       });
+    }
+
+    return pendingCaches[cacheName].then((cache) => {
+      res.set('content-type', 'text/html');
+      res.end(cache);
     });
   });
 
