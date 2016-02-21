@@ -15,7 +15,7 @@ describe('markedown compile server',()=>{
   let server
   before((done)=>{
     const app= express()
-    app.use(middleware(cwd))
+    app.use('/articles',middleware(cwd))
 
     server= app.listen(port,done)
   })
@@ -26,7 +26,7 @@ describe('markedown compile server',()=>{
   })
 
   it('markdownをhtmlとしてコンパイル返す。htmlはキャッシュとして保存し、以降はコンパイルしない',()=>{
-    return caravan(`http://localhost:${port}`)
+    return caravan(`http://localhost:${port}/articles`)
     .progress((progress)=>{
       assert.equal(progress.value,'<p><strong>要反省である</strong></p>')
     })
